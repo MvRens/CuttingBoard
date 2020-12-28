@@ -1,6 +1,8 @@
 import { createStore } from 'vuex';
 import { units } from './lib/units';
 
+import { serialize, deserialize } from '@ygoe/msgpack';
+
 
 function mergeObject(source, target)
 {
@@ -18,6 +20,56 @@ function parseFloatDef(value)
 {
   const parsedValue = parseFloat(value);
   return Object.is(parsedValue, NaN) ? 0 : parsedValue;
+}
+
+
+
+function loadObject(state, parsedPayload)
+{
+  if (parsedPayload.hasOwnProperty('settings'))
+    mergeObject(parsedPayload.settings, state.settings);
+
+  if (parsedPayload.hasOwnProperty('boards'))
+  {
+
+    const newBoards = parsedPayload.boards.map(board =>
+    {
+      if (!board.hasOwnProperty('layers'))
+      {
+        return {
+          layers: []
+        };
+      }
+
+      return {
+        layers: board.layers.map(layer =>
+        {
+          return {
+            wood: parseFloatDef(layer.wood),
+            width: parseFloatDef(layer.width)
+          }
+        })
+      };
+    })
+
+    if (newBoards.length === 0)
+      newBoards.push({ layers: [] });
+
+    state.boards = newBoards;
+  }
+
+  if (parsedPayload.hasOwnProperty('wood'))
+  {
+    const newWood = parsedPayload.wood.map(item =>
+    {
+      return {
+        name: item.name,
+        color: item.color
+      };
+    });
+
+    state.wood = newWood;
+  }
 }
 
 
@@ -178,53 +230,20 @@ export default createStore({
     load(state, payload)
     {
       const parsedPayload = JSON.parse(payload);
+      loadObject(state, parsedPayload);
+    },
 
-      if (parsedPayload.hasOwnProperty('settings'))
-        mergeObject(parsedPayload.settings, state.settings);
-
-      if (parsedPayload.hasOwnProperty('boards'))
+    loadMsgPack(state, payload)
+    {
+      try
       {
-
-        const newBoards = parsedPayload.boards.map(board =>
-        {
-          if (!board.hasOwnProperty('layers'))
-          {
-            return {
-              layers: []
-            };
-          }
-
-          return {
-            layers: board.layers.map(layer =>
-            {
-              return {
-                wood: parseFloatDef(layer.wood),
-                width: parseFloatDef(layer.width)
-              }
-            })
-          };
-        })
-
-        if (newBoards.length === 0)
-          newBoards.push({ layers: [] });
-
-        state.boards = newBoards;
+        const parsedPayload = deserialize(payload);
+        loadObject(state, parsedPayload);
       }
-
-      if (parsedPayload.hasOwnProperty('wood'))
+      catch(e)
       {
-        const newWood = parsedPayload.wood.map(item =>
-        {
-          return {
-            name: item.name,
-            color: item.color
-          };
-        });
-
-        state.wood = newWood;
+        console.error(e);
       }
-
-      // TODO validate layers and wood types and apply the new sets
     }
   },
 
@@ -232,6 +251,11 @@ export default createStore({
     save(state)
     {
       return JSON.stringify(state);
+    },
+
+    saveMsgPack(state)
+    {
+      return serialize(state);
     }
   }
 })

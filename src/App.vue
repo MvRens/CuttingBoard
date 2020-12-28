@@ -12,6 +12,10 @@
     <h1>Save / load</h1>
     <div class="loadSave block">
       <p>
+        Below you can download the current settings or load them again from a file. You can also bookmark the current page or copy the URL from the address bar instead, as it is automatically updated whenever you change anything.
+      </p>
+
+      <p>
         <input type="text" v-model="saveFilename" />
         <button @click="save()">Save</button>
       </p>
@@ -50,6 +54,7 @@ import EndGrainPreview from './components/EndGrainPreview.vue'
 import EdgeGrainPreview from './components/EdgeGrainPreview.vue'
 
 import { saveAs } from 'file-saver';
+import { bytesToBase64, base64ToBytes } from './lib/base64';
 
 export default {
   name: 'App',
@@ -65,6 +70,42 @@ export default {
   {
     return {
       saveFilename: 'My cutting board'
+    }
+  },
+
+  created()
+  {
+    const self = this;
+    const checkHash = () =>
+    {
+      if (!location.hash)
+        return;
+
+      const hash = location.hash.substring(1);
+      try
+      {
+        const decoded = base64ToBytes(hash);
+        if (decoded)
+          self.$store.commit('loadMsgPack', decoded);
+      }
+      catch (e)
+      {
+        console.error(e);
+      }
+    }
+
+    checkHash();
+
+    window.addEventListener('hashchange', () =>
+    {
+      checkHash();
+    });
+  },
+
+  computed: {
+    hash()
+    {
+      return bytesToBase64(this.$store.getters.saveMsgPack);
     }
   },
 
@@ -94,6 +135,13 @@ export default {
         this.$store.commit('load', event.target.result);
       });
       reader.readAsBinaryString(loadFile);
+    }
+  },
+
+  watch: {
+    hash: (newValue) =>
+    {
+      history.replaceState({}, '', '#' + newValue);
     }
   }
 }

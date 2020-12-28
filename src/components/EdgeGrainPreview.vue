@@ -36,6 +36,9 @@ export default {
 
     boardHeight()
     {
+      if (this.layers.length == 0)
+        return 0;
+
       return this.layers
           .map(currentValue => currentValue.width)
           .reduce((accumulator, currentValue) => accumulator + currentValue);

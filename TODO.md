@@ -6,7 +6,6 @@ Should have
 - Material usage overview
 - Generate cutting list
 - Support for fractional inches (see, not all europeans look down on freedom units!)
-- Save/load via URL (MessagePack encoded Base64 in URL)
 
 Nice to have
 ----
