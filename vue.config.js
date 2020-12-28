@@ -1,5 +1,7 @@
 module.exports = {
   outputDir: 'docs',
+  publicPath: '/CuttingBoard/',
+
   chainWebpack: config => {
     config
       .plugin('html')
