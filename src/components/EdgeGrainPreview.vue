@@ -1,27 +1,19 @@
 <template>
   <div class="preview">
+    <div class="dimensions">Dimensions: {{ display(boardWidth) }} x {{ display(boardHeight) }} x {{ display(settings.boardThickness) }}</div>
+
     <svg
       :width="viewportWidth"
       :height="viewportHeight"
       :viewBox="viewBox">
-      <defs>
-        <g id="strip">
-          <rect
-            v-for="(layer, index) in layers"
-            :width="toPixels(settings.boardThickness)"
-            :height="toPixels(layer.width)"
-            x="0"
-            :y="getLayerOffset(index)"
-            :style="getLayerStyle(index)" />
-        </g>
-      </defs>
 
-      <use
-        v-for="(strip, index) in stripsPerBoard"
-        xlink:href="#strip"
-        :x="index * settings.boardThickness"
-        y="0"
-        :transform="getLayerTransform(index)" />
+      <rect
+        v-for="(layer, index) in layers"
+        :width="toPixels(settings.boardLength)"
+        :height="toPixels(layer.width)"
+        x="0"
+        :y="getLayerOffset(index)"
+        :style="getLayerStyle(index)" />
     </svg>
   </div>
 </template>
@@ -40,20 +32,7 @@ export default {
     wood() { return this.$store.state.wood; },
     layers() { return this.$store.state.boards[0].layers; },
 
-    stripsPerBoard()
-    {
-      const stripAndKerf = this.settings.crosscutWidth + this.settings.bladeKerf;
-      if (stripAndKerf === 0)
-        return 0;
-
-      return Math.floor((this.settings.boardLength + this.settings.bladeKerf) / stripAndKerf);
-    },
-
-    boardWidth()
-    {
-      const boardWidth = this.stripsPerBoard * this.settings.boardThickness;
-      return this.toPixels(boardWidth);
-    },
+    boardWidth() { return this.settings.boardLength; },
 
     boardHeight()
     {
@@ -62,9 +41,19 @@ export default {
           .reduce((accumulator, currentValue) => accumulator + currentValue);
     },
 
-    viewportWidth() { return Math.floor(this.boardWidth * this.scale); },
-    viewportHeight() { return Math.floor(this.boardHeight * this.scale); },
-    viewBox() { return '0 0 ' + this.boardWidth + ' ' + this.boardHeight; }
+    boardPixelWidth()
+    {
+      return this.toPixels(this.boardWidth);
+    },
+
+    boardPixelHeight()
+    {
+      return this.toPixels(this.boardHeight);
+    },
+
+    viewportWidth() { return Math.floor(this.boardPixelWidth * this.scale); },
+    viewportHeight() { return Math.floor(this.boardPixelHeight * this.scale); },
+    viewBox() { return '0 0 ' + this.boardPixelWidth + ' ' + this.boardPixelHeight; }
   },
 
 
@@ -72,6 +61,11 @@ export default {
     toPixels(value)
     {
       return units.toPixels(value, this.settings.units);
+    },
+
+    display(value)
+    {
+      return units.display(value, this.settings.units);
     },
 
     getLayerOffset(index)
@@ -84,7 +78,7 @@ export default {
       for (let i = 0; i < index; i++)
         offset += this.layers[i].width;
 
-      return offset;
+      return this.toPixels(offset);
     },
 
     getLayerStyle(index)
@@ -101,14 +95,6 @@ export default {
         : '';
 
       return 'fill: ' + this.wood[woodIndex].color + borderStyle;
-    },
-
-    getLayerTransform(index)
-    {
-      if (!this.settings.alternateDirection || (index % 2) == 0)
-        return '';
-
-      return 'scale(1, -1) translate(0, -' + this.boardHeight + ')';
     }
   }
 }

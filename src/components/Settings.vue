@@ -3,10 +3,11 @@
     <h2>Designer</h2>
 
     <label for="units">Units</label>
-    <select id="units" disabled>
+    <select id="units" :value="settings.units" @change="$store.commit('updateSettings', { units: $event.target.value })">
       <option value="mm">Millimeters</option>
       <option value="cm">Centimeters</option>
-      <option value="inch">Inches (fractional)</option>
+      <option value="inchdecimal">Inches (decimal)</option>
+      <!--<option value="inchfractional">Inches (fractional)</option>-->
     </select>
 
     <label for="borders">Show borders</label>

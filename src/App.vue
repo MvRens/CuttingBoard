@@ -17,7 +17,7 @@
       </p>
 
       <p>
-        <input type="file" id="loadFile" accept=".json" />
+        <input type="file" ref="loadFile" accept=".json" />
         <button @click="load()">Load</button>
       </p>
     </div>
@@ -35,10 +35,10 @@
 
   <div class="app-preview">
     <h1>Edge grain</h1>
-    <EndGrainPreview :scale="1" />
+    <EdgeGrainPreview :scale="1" />
 
     <h1>End grain</h1>
-    <EdgeGrainPreview :scale="1" />
+    <EndGrainPreview :scale="1" />
   </div>
 </template>
 
@@ -80,7 +80,7 @@ export default {
 
     load()
     {
-      const loadFile = document.getElementById("loadFile").files[0];
+      const loadFile = this.$refs.loadFile.files[0];
       if (!loadFile)
         return;
 
@@ -139,7 +139,7 @@ h1
   }
 }
 
-.about, .todo
+.about
 {
   width: 30em;
 }

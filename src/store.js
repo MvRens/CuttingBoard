@@ -25,12 +25,12 @@ function parseFloatDef(value)
 export default createStore({
   state: {
     settings: {
-      units: 'mm',
+      units: 'cm',
       borders: false,
-      boardThickness: 20,
-      boardLength: 700,
-      bladeKerf: 3.5,
-      crosscutWidth: 30,
+      boardThickness: 2,
+      boardLength: 70,
+      bladeKerf: 0.35,
+      crosscutWidth: 3,
 
       alternateDirection: true
     },
@@ -50,20 +50,14 @@ export default createStore({
     boards: [
       {
         layers: [
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 },
-          { wood: 0, width: 20 },
-          { wood: 1, width: 20 }
+          { wood: 8, width: 1 },
+          { wood: 1, width: 1.5 },
+          { wood: 8, width: 2 },
+          { wood: 1, width: 2 },
+          { wood: 8, width: 15 },
+          { wood: 1, width: 2 },
+          { wood: 8, width: 1.5 },
+          { wood: 1, width: 1 }
         ]
       }
     ]
@@ -86,10 +80,43 @@ export default createStore({
       if (payload.board < 0 || payload.board >= state.boards.length)
         return;
 
-      if (payload.layer < 0 || payload.layer >= state.boards[payload.board].length)
+      const board = state.boards[payload.board];
+
+      if (payload.layer < 0 || payload.layer >= board.layers.length)
         return;
 
-      state.boards[payload.board].layers.splice(payload.layer, 1);
+      board.layers.splice(payload.layer, 1);
+    },
+
+    moveLayer(state, payload)
+    {
+      if (payload.board < 0 || payload.board >= state.boards.length)
+        return;
+
+      const board = state.boards[payload.board];
+
+      if (payload.from < 0 || payload.from >= board.layers.length)
+        return;
+
+      if (payload.to < 0 || payload.to > board.layers.length)
+        return;
+
+      if (payload.to == board.layers.length)
+      {
+        // Move to end
+        board.layers.push(board.layers[payload.from]);
+        board.layers.splice(payload.from, 1);
+      }
+      else
+      {
+        const item = board.layers[payload.from];
+        board.layers.splice(payload.from, 1);
+
+        if (payload.to > payload.from)
+          payload.to--;
+
+        board.layers.splice(payload.to, 0, item);
+      }
     },
 
 
@@ -124,7 +151,27 @@ export default createStore({
 
     updateSettings(state, payload)
     {
+      const oldUnits = state.settings.units;
+
       mergeObject(payload, state.settings);
+
+      if (oldUnits !== state.settings.units)
+      {
+        // Convert the settings
+        state.settings.boardThickness = units.limitDecimals(units.convert(state.settings.boardThickness, oldUnits, state.settings.units), 3);
+        state.settings.boardLength = units.limitDecimals(units.convert(state.settings.boardLength, oldUnits, state.settings.units), 3);
+        state.settings.bladeKerf = units.limitDecimals(units.convert(state.settings.bladeKerf, oldUnits, state.settings.units), 3);
+        state.settings.crosscutWidth = units.limitDecimals(units.convert(state.settings.crosscutWidth, oldUnits, state.settings.units), 3);
+
+        // Convert the layers
+        state.boards.forEach(board =>
+        {
+          board.layers.forEach(layer =>
+          {
+            layer.width = units.limitDecimals(units.convert(layer.width, oldUnits, state.settings.units), 3);
+          });
+        });
+      }
     },
 
 
