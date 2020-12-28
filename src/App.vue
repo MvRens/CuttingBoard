@@ -187,7 +187,7 @@ h1
   }
 }
 
-.about
+.loadSave, .about
 {
   width: 30em;
 }
