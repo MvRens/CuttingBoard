@@ -1,6 +1,6 @@
 module.exports = {
   outputDir: 'docs',
-  publicPath: '/CuttingBoard/',
+  publicPath: '',
 
   chainWebpack: config => {
     config

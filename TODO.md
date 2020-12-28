@@ -5,7 +5,6 @@ Must have
 ----
 - Implement switching units
 - Re-ordering of the layers (preferably drag/drop)
-- Save / load designs (clipboard, or preferably file download/upload - maybe Cloud storage integration later?)
 
 Should have
 ----

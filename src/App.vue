@@ -9,8 +9,21 @@
     <h1>Wood types</h1>
     <Wood class="block" />
 
+    <h1>Save / load</h1>
+    <div class="loadSave block">
+      <p>
+        <input type="text" v-model="saveFilename" />
+        <button @click="save()">Save</button>
+      </p>
+
+      <p>
+        <input type="file" id="loadFile" accept=".json" />
+        <button @click="load()">Load</button>
+      </p>
+    </div>
+
     <h1>About / feedback</h1>
-    <div class="about">
+    <div class="about block">
       <p>
         Created by Mark van Renswoude. Open-source and available under the Unlicense to the public domain on <a href="https://github.com/MvRens/CuttingBoard" target="_blank">Github</a>, where feedback is welcome under Issues.
       </p>
@@ -36,6 +49,8 @@ import Wood from './components/Wood.vue'
 import EndGrainPreview from './components/EndGrainPreview.vue'
 import EdgeGrainPreview from './components/EdgeGrainPreview.vue'
 
+import { saveAs } from 'file-saver';
+
 export default {
   name: 'App',
   components: {
@@ -44,6 +59,42 @@ export default {
     Settings,
     Layers,
     Wood
+  },
+
+  data()
+  {
+    return {
+      saveFilename: 'My cutting board'
+    }
+  },
+
+  methods: {
+    save()
+    {
+      const state = this.$store.getters.save;
+      const blob = new Blob([state], { type: 'text/plain; charset=utf-8' });
+
+      saveAs(blob, this.saveFilename + '.json');
+    },
+
+
+    load()
+    {
+      const loadFile = document.getElementById("loadFile").files[0];
+      if (!loadFile)
+        return;
+
+      this.saveFilename = loadFile.name.toLowerCase().endsWith('.json')
+        ? loadFile.name.substring(0, loadFile.name.length - 5)
+        : loadFile.name;
+
+      const reader = new FileReader();
+      reader.addEventListener('load', (event) =>
+      {
+        this.$store.commit('load', event.target.result);
+      });
+      reader.readAsBinaryString(loadFile);
+    }
   }
 }
 </script>

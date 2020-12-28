@@ -1,6 +1,27 @@
 import { createStore } from 'vuex';
 import { units } from './lib/units';
 
+
+function mergeObject(source, target)
+{
+  for (const property in source)
+  {
+    if (!source.hasOwnProperty(property) || !target.hasOwnProperty(property))
+      continue;
+
+    target[property] = source[property];
+  }
+}
+
+
+function parseFloatDef(value)
+{
+  const parsedValue = parseFloat(value);
+  return Object.is(parsedValue, NaN) ? 0 : parsedValue;
+}
+
+
+
 export default createStore({
   state: {
     settings: {
@@ -103,16 +124,67 @@ export default createStore({
 
     updateSettings(state, payload)
     {
-      for (const property in payload)
-      {
-        if (!payload.hasOwnProperty(property) || !state.settings.hasOwnProperty(property))
-          continue;
+      mergeObject(payload, state.settings);
+    },
 
-        state.settings[property] = payload[property];
+
+    load(state, payload)
+    {
+      const parsedPayload = JSON.parse(payload);
+
+      if (parsedPayload.hasOwnProperty('settings'))
+        mergeObject(parsedPayload.settings, state.settings);
+
+      if (parsedPayload.hasOwnProperty('boards'))
+      {
+
+        const newBoards = parsedPayload.boards.map(board =>
+        {
+          if (!board.hasOwnProperty('layers'))
+          {
+            return {
+              layers: []
+            };
+          }
+
+          return {
+            layers: board.layers.map(layer =>
+            {
+              return {
+                wood: parseFloatDef(layer.wood),
+                width: parseFloatDef(layer.width)
+              }
+            })
+          };
+        })
+
+        if (newBoards.length === 0)
+          newBoards.push({ layers: [] });
+
+        state.boards = newBoards;
       }
+
+      if (parsedPayload.hasOwnProperty('wood'))
+      {
+        const newWood = parsedPayload.wood.map(item =>
+        {
+          return {
+            name: item.name,
+            color: item.color
+          };
+        });
+
+        state.wood = newWood;
+      }
+
+      // TODO validate layers and wood types and apply the new sets
     }
   },
 
-  actions: {
+  getters: {
+    save(state)
+    {
+      return JSON.stringify(state);
+    }
   }
 })
