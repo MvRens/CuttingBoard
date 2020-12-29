@@ -61,9 +61,10 @@ export default {
 
   h2
   {
+    color: #808080;
     font-size: 80%;
     margin-top: 1em;
-    margin-bottom: 0;
+    margin-bottom: .25em;
     grid-column: 1 / 3;
   }
 }

@@ -10,7 +10,7 @@
 
 
     <span class="header">&nbsp;</span>
-    <span class="header">Wood type</span>
+    <span class="header">Wood species</span>
     <span class="header">Width</span>
     <span class="header">&nbsp;</span>
 
@@ -177,12 +177,12 @@ export default {
 
     &.dropTargetAbove
     {
-      border-top: solid 1px black;
+      border-top: solid 1px white;
     }
 
     &.dropTargetBelow
     {
-      border-bottom: solid 1px black;
+      border-bottom: solid 1px white;
     }
   }
 

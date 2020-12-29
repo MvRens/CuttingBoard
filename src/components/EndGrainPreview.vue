@@ -48,7 +48,12 @@ export default {
       if (stripAndKerf === 0)
         return 0;
 
-      return Math.floor((this.settings.boardLength + this.settings.bladeKerf) / stripAndKerf);
+      let stripsPerBoard = (this.settings.boardLength + this.settings.bladeKerf) / stripAndKerf;
+
+      // Try to account for rounding errors
+      stripsPerBoard = units.limitDecimals(stripsPerBoard, 3);
+
+      return Math.floor(stripsPerBoard);
     },
 
     boardWidth()
@@ -132,3 +137,24 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.dimensions
+{
+  margin-bottom: .5em;
+}
+
+
+svg
+{
+  @media screen
+  {
+    box-shadow: 0 0 3em black;
+  }
+
+  @media print
+  {
+    max-width: 100%;
+  }
+}
+</style>

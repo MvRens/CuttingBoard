@@ -102,3 +102,24 @@ export default {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+.dimensions
+{
+  margin-bottom: .5em;
+}
+
+
+svg
+{
+  @media screen
+  {
+    box-shadow: 0 0 3em black;
+  }
+
+  @media print
+  {
+    max-width: 100%;
+  }
+}
+</style>
