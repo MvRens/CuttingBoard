@@ -13,7 +13,7 @@ function DefaultSettings()
     borders: false,
     bladeKerf: 0.35,
     crosscutWidth: 3,
-    direction: DirectionEnum.uniform
+    direction: DirectionEnum.alternate
   };
 }
 
