@@ -5,27 +5,39 @@
       <th>Wood species</th>
       <th class="dimension">Width</th>
     </tr>
-    <tr v-for="(layer, index) in layers">
-      <td>{{ index + 1 }}</td>
-      <td>{{ getLayerWood(index) }}</td>
-      <td class="dimension">{{ getLayerWidth(index) }}</td>
-    </tr>
+    <template v-for="(board, boardIndex) in boards">
+      <tr class="board" v-if="boards.length > 1">
+        <td colspan="3">Board {{ boardIndex + 1 }}</td>
+      </tr>
+
+      <tr v-for="(layer, index) in board.layers">
+        <td>{{ index + 1 }}</td>
+        <td>{{ getLayerWood(board, index) }}</td>
+        <td class="dimension">{{ getLayerWidth(board, index) }}</td>
+      </tr>
+    </template>
   </table>
 
   <h2>Bill of materials</h2>
   <table class="list">
     <tr>
       <th>Wood species</th>
-      <th class="dimension">Thickness</th>
       <th class="dimension">Length</th>
       <th class="dimension">Width</th>
+      <th class="dimension">Thickness</th>
     </tr>
-    <tr v-for="stock in bom">
-      <td>{{ stock.woodName }}</td>
-      <td class="dimension">{{ display(settings.boardThickness) }}</td>
-      <td class="dimension">{{ display(settings.boardLength) }}</td>
-      <td class="dimension">{{ display(stock.width) }}</td>
-    </tr>
+    <template v-for="(board, boardIndex) in bom">
+      <tr class="board" v-if="bom.length > 1">
+        <td colspan="3">Board {{ boardIndex + 1 }}</td>
+      </tr>
+
+      <tr v-for="stock in board">
+        <td>{{ stock.woodName }}</td>
+        <td class="dimension">{{ display(stock.length) }}</td>
+        <td class="dimension">{{ display(stock.width) }}</td>
+        <td class="dimension">{{ display(stock.thickness) }}</td>
+      </tr>
+    </template>
   </table>
 </template>
 
@@ -35,59 +47,66 @@ import { units } from '../lib/units';
 export default {
   computed: {
     settings() { return this.$store.state.settings; },
-    layers() { return this.$store.state.boards[0].layers; },
+    boards() { return this.$store.state.boards; },
     wood() { return this.$store.state.wood; },
 
     bom()
     {
-      const woodTally = {};
+      const self = this;
 
-      this.layers.forEach(layer =>
+      return self.boards.map((board, boardIndex) =>
       {
-        if (woodTally.hasOwnProperty(layer.wood))
-          woodTally[layer.wood] += layer.width + this.settings.bladeKerf;
-        else
-          woodTally[layer.wood] = layer.width;
-      });
+        const bom = [];
+        const woodTally = {};
 
-      const bom = [];
-
-      for (let wood in woodTally)
-      {
-        if (!woodTally.hasOwnProperty(wood))
-          continue;
-
-        bom.push({
-          woodName: wood !== null && wood >= 0 && wood < this.wood.length ? this.wood[wood].name : '',
-          width: woodTally[wood]
+        board.layers.forEach(layer =>
+        {
+          if (woodTally.hasOwnProperty(layer.wood))
+            woodTally[layer.wood] += layer.width + self.settings.bladeKerf;
+          else
+            woodTally[layer.wood] = layer.width;
         });
-      }
 
-      return bom;
+        for (let wood in woodTally)
+        {
+          if (!woodTally.hasOwnProperty(wood))
+            continue;
+
+          bom.push({
+            board: boardIndex,
+            woodName: wood >= 0 && wood < self.wood.length ? self.wood[wood].name : '',
+            length: board.length,
+            width: woodTally[wood],
+            thickness: board.thickness
+          });
+        }
+
+        return bom;
+      });
     }
   },
 
 
   methods: {
-    getLayerWood(index)
+    getLayerWood(board, index)
     {
-      if (index < 0 || index >= this.layers.length)
+      if (index < 0 || index >= board.layers.length)
         return '';
 
-      const woodIndex = this.layers[index].wood;
-      if (woodIndex === null || woodIndex < 0 || woodIndex >= this.wood.length)
+      const woodIndex = board.layers[index].wood;
+      if (woodIndex < 0 || woodIndex >= this.wood.length)
         return '';
 
       return this.wood[woodIndex].name;
     },
 
 
-    getLayerWidth(index)
+    getLayerWidth(board, index)
     {
-      if (index < 0 || index >= this.layers.length)
+      if (index < 0 || index >= board.layers.length)
         return '';
 
-      return this.display(this.layers[index].width);
+      return this.display(board.layers[index].width);
     },
 
 
@@ -123,7 +142,12 @@ h2
     text-align: right;
   }
 
-  tr:nth-child(even) td
+  tr.board td
+  {
+    font-style: italic;
+  }
+
+  tr:nth-child(even):not(.board) td
   {
     background-color: #555555;
 

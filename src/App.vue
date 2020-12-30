@@ -28,12 +28,12 @@
         </p>
 
         <div>
-          <input type="checkbox" v-model="printEdgeGrain" id="printEdgeGrain" />
-          <label for="printEdgeGrain"> Edge grain preview</label>
-        </div>
-        <div>
           <input type="checkbox" v-model="printEndGrain" id="printEndGrain" />
           <label for="printEndGrain"> End grain preview</label>
+        </div>
+        <div>
+          <input type="checkbox" v-model="printEdgeGrain" id="printEdgeGrain" />
+          <label for="printEdgeGrain"> Edge grain preview</label>
         </div>
         <div>
           <input type="checkbox" v-model="printCuttingList" id="printCuttingList" />
@@ -72,14 +72,17 @@
   </div>
 
   <div class="content">
-    <div :class="{ hideOnPrint: !printEdgeGrain }">
-      <h1>Edge grain</h1>
-      <EdgeGrainPreview :scale="1" />
-    </div>
-
     <div :class="{ hideOnPrint: !printEndGrain }">
       <h1>End grain</h1>
       <EndGrainPreview :scale="1" />
+    </div>
+
+    <div :class="{ hideOnPrint: !printEdgeGrain }">
+      <h1>Edge grain</h1>
+      <template v-for="(board, boardIndex) in boards">
+        <h2 v-if="boards.length > 1">Board {{ boardIndex + 1}}</h2>
+        <EdgeGrainPreview :board="board" :scale="1" />
+      </template>
     </div>
 
     <div :class="{ hideOnPrint: !printCuttingList }">
@@ -153,6 +156,8 @@ export default {
   },
 
   computed: {
+    boards() { return this.$store.state.boards; },
+
     hash()
     {
       return bytesToBase64(this.$store.getters.saveMsgPack);
@@ -234,6 +239,12 @@ html, body
   height: 100%;
 }
 
+h2
+{
+  color: #808080;
+  font-size: 80%;
+}
+
 a
 {
   color: #99ccff;
@@ -266,7 +277,7 @@ button
   padding-top: .3em;
   padding-bottom: .3em;
 
-  &:hover
+  &:hover:not([disabled])
   {
     background-color: #808080;
   }

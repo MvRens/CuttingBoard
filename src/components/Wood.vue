@@ -1,9 +1,5 @@
 <template>
   <div class="wood">
-    <div class="add">
-      <button @click="addWood()">Add wood species</button>
-    </div>
-
     <span class="header">Name</span>
     <span class="header">Colour</span>
     <span class="header">&nbsp;</span>
@@ -16,6 +12,10 @@
         <button @click="removeWood(index)">X</button>
       </div>
     </template>
+
+    <div class="add">
+      <button @click="addWood()">Add wood species</button>
+    </div>
   </div>
 </template>
 
@@ -45,20 +45,25 @@ export default {
 <style lang="scss" scoped>
 .wood
 {
-  display: inline-grid;
-  grid-template-columns: 23em 5em 3em;
+  display: grid;
+  grid-template-columns: auto min-content min-content;
   grid-column-gap: 1em;
 
   .add
   {
     grid-column: 1 / 4;
-    padding-bottom: 1em;
+    padding-top: 1em;
   }
 
   .header
   {
     font-weight: bold;
     margin-bottom: .25em;
+  }
+
+  button
+  {
+    height: 100%;
   }
 }
 </style>

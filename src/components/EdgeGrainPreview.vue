@@ -1,6 +1,6 @@
 <template>
   <div class="preview">
-    <div class="dimensions">Dimensions: {{ display(boardWidth) }} x {{ display(boardHeight) }} x {{ display(settings.boardThickness) }}</div>
+    <div class="dimensions">Dimensions: {{ display(boardWidth) }} x {{ display(boardHeight) }} x {{ display(board.thickness) }}</div>
 
     <svg
       :width="viewportWidth"
@@ -9,7 +9,7 @@
 
       <rect
         v-for="(layer, index) in layers"
-        :width="toPixels(settings.boardLength)"
+        :width="toPixels(board.length)"
         :height="toPixels(layer.width)"
         x="0"
         :y="getLayerOffset(index)"
@@ -23,16 +23,17 @@ import { units } from '../lib/units';
 
 export default {
   props: {
-    scale: Number
+    scale: Number,
+    board: Object
   },
 
 
   computed: {
     settings() { return this.$store.state.settings; },
     wood() { return this.$store.state.wood; },
-    layers() { return this.$store.state.boards[0].layers; },
+    layers() { return this.board.layers; },
 
-    boardWidth() { return this.settings.boardLength; },
+    boardWidth() { return this.board.length; },
 
     boardHeight()
     {
@@ -41,7 +42,7 @@ export default {
 
       return this.layers
           .map(currentValue => currentValue.width)
-          .reduce((accumulator, currentValue) => accumulator + currentValue);
+          .reduce((accumulator, currentValue) => accumulator + currentValue, 0);
     },
 
     boardPixelWidth()
@@ -90,7 +91,7 @@ export default {
         return 'fill: fuchsia';
 
       const woodIndex = this.layers[index].wood;
-      if (woodIndex === null)
+      if (woodIndex < 0 || woodIndex >= this.wood.length)
         return '';
 
       const borderStyle = this.settings.borders

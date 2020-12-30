@@ -2,28 +2,41 @@
   <div class="preview">
     <div class="dimensions">Dimensions: {{ display(boardWidth) }} x {{ display(boardHeight) }} x {{ display(settings.crosscutWidth) }}</div>
 
+    <div v-if="boards.length > 1" class="draghint hideOnPrint">Click and drag strips to reorder them. Click once to reverse the direction.</div>
+
     <svg
       :width="viewportWidth"
       :height="viewportHeight"
-      :viewBox="viewBox">
+      :viewBox="viewBox"
+      :class="{ dragging: dropTarget !== null }">
       <defs>
-        <g id="strip">
+        <g v-for="(board, boardIndex) in boards" :id="'strip' + boardIndex">
           <rect
-            v-for="(layer, index) in layers"
-            :width="toPixels(settings.boardThickness)"
+            v-for="(layer, index) in board.layers"
+            :width="toPixels(board.thickness)"
             :height="toPixels(layer.width)"
             x="0"
-            :y="getLayerOffset(index)"
-            :style="getLayerStyle(index)" />
+            :y="getBoardLayerOffset(board, index)"
+            :style="getBoardLayerStyle(board, index)" />
+        </g>
+        <g id="dropTarget">
+          <line x1="0" y1="0" x2="0" :y2="boardPixelHeight" style="stroke: white; stroke-width: 2" />
         </g>
       </defs>
 
       <use
-        v-for="(strip, index) in stripsPerBoard"
-        xlink:href="#strip"
-        :x="toPixels(index * settings.boardThickness)"
+        v-for="(layer, index) in endGrain"
+        :ref="'strip' + index"
+        :href="'#strip' + layer.board"
+        :x="getLayerOffset(index)"
         y="0"
-        :transform="getLayerTransform(index)" />
+        :transform="getLayerTransform(index)"
+        @mousedown.prevent="mouseDown(index, $event)" />
+
+      <use
+        v-if="dropTarget !== null"
+        href="#dropTarget"
+        :x="getLayerOffset(dropTarget)" />
     </svg>
   </div>
 </template>
@@ -37,38 +50,39 @@ export default {
   },
 
 
+  data()
+  {
+    return {
+      dragIndex: null,
+      dropTarget: null
+    };
+  },
+
+
   computed: {
     settings() { return this.$store.state.settings; },
+    boards() { return this.$store.state.boards; },
     wood() { return this.$store.state.wood; },
-    layers() { return this.$store.state.boards[0].layers; },
-
-    stripsPerBoard()
-    {
-      const stripAndKerf = this.settings.crosscutWidth + this.settings.bladeKerf;
-      if (stripAndKerf === 0)
-        return 0;
-
-      let stripsPerBoard = (this.settings.boardLength + this.settings.bladeKerf) / stripAndKerf;
-
-      // Try to account for rounding errors
-      stripsPerBoard = units.limitDecimals(stripsPerBoard, 3);
-
-      return Math.floor(stripsPerBoard);
-    },
+    endGrain() { return this.$store.state.endGrain },
 
     boardWidth()
     {
-      return this.stripsPerBoard * this.settings.boardThickness;
+      const self = this;
+
+      return this.endGrain
+        .map(layer => layer.board >= 0 && layer.board < self.boards.length ? self.boards[layer.board].thickness : 0)
+        .reduce((accumulator, currentValue) => accumulator + currentValue, 0);
     },
 
     boardHeight()
     {
-      if (this.layers.length == 0)
-        return 0;
-
-      return this.layers
-          .map(currentValue => currentValue.width)
-          .reduce((accumulator, currentValue) => accumulator + currentValue);
+      // Calculate the total width of each board (adding all the layers, inner map/reduce),
+      // then use the maximum value (outer map/reduce)
+      return this.boards
+        .map(board => board.layers
+          .map(layer => layer.width)
+          .reduce((accumulator, currentValue) => accumulator + currentValue, 0))
+        .reduce((accumulator, currentValue) => currentValue > accumulator ? currentValue : accumulator, 0);
     },
 
     boardPixelWidth()
@@ -98,26 +112,26 @@ export default {
       return units.display(value, this.settings.units);
     },
 
-    getLayerOffset(index)
+    getBoardLayerOffset(board, index)
     {
-      if (index < 0 || index >= this.layers.length)
+      if (index < 0 || index >= board.layers.length)
         return 0;
 
       let offset = 0;
 
       for (let i = 0; i < index; i++)
-        offset += this.layers[i].width;
+        offset += board.layers[i].width;
 
       return this.toPixels(offset);
     },
 
-    getLayerStyle(index)
+    getBoardLayerStyle(board, index)
     {
-      if (index < 0 || index >= this.layers.length)
+      if (index < 0 || index >= board.layers.length)
         return 'fill: fuchsia';
 
-      const woodIndex = this.layers[index].wood;
-      if (woodIndex === null)
+      const woodIndex = board.layers[index].wood;
+      if (woodIndex < 0 || woodIndex >= this.wood.length)
         return '';
 
       const borderStyle = this.settings.borders
@@ -127,12 +141,151 @@ export default {
       return 'fill: ' + this.wood[woodIndex].color + borderStyle;
     },
 
+    getLayerOffset(index)
+    {
+      if (index < 0 || index > this.endGrain.length)
+        return 0;
+
+      let offset = 0;
+
+      for (let i = 0; i < index; i++)
+      {
+        const boardIndex = this.endGrain[i].board;
+        if (boardIndex >= 0 && boardIndex < this.boards.length)
+          offset += this.boards[boardIndex].thickness;
+      }
+
+      return this.toPixels(offset);
+    },
+
     getLayerTransform(index)
     {
-      if (!this.settings.alternateDirection || (index % 2) == 0)
-        return '';
+      let reversed = false;
 
-      return 'scale(1, -1) translate(0, -' + this.boardPixelHeight + ')';
+      switch (this.settings.direction)
+      {
+        case 'alternate':
+          reversed = (index % 2) == 0;
+          break;
+
+        case 'custom':
+          reversed = index >= 0 && index < this.endGrain.length && this.endGrain[index].reversed;
+          break;
+      }
+
+      return reversed ? 'scale(1, -1) translate(0, -' + this.boardPixelHeight + ')' : '';
+    },
+
+    reverseLayer(index)
+    {
+      if (this.settings.direction !== 'custom')
+        return;
+
+      if (index < 0 || index >= this.endGrain.length)
+        return;
+
+      this.endGrain[index].reversed = !this.endGrain[index].reversed;
+    },
+
+
+    mouseDown(index, event)
+    {
+      const self = this;
+      const startX = event.pageX;
+      let dragging = false;
+
+      const dragMouseMove = (moveEvent) =>
+      {
+        if (!dragging)
+        {
+          if (Math.abs(moveEvent.pageX - startX) >= 5)
+          {
+            self.dragIndex = index;
+            dragging = true;
+          }
+        }
+
+        if (dragging)
+          self.dropTarget = self.getTargetStrip(moveEvent.pageX);
+      };
+
+      let dragMouseUp;
+      dragMouseUp = () =>
+      {
+        document.removeEventListener('mousemove', dragMouseMove);
+        document.removeEventListener('mouseup', dragMouseUp);
+
+        if (dragging)
+        {
+          if (self.dragIndex !== self.dropTarget)
+            self.$store.commit('moveEndgrain', { from: self.dragIndex, to: self.dropTarget });
+
+          self.dropTarget = null;
+          self.dragIndex = null;
+        }
+        else
+          self.reverseLayer(index);
+      };
+
+      document.addEventListener('mousemove', dragMouseMove);
+      document.addEventListener('mouseup', dragMouseUp);
+    },
+
+
+    getTargetStrip(xPos)
+    {
+      if (this.endGrain.length == 0)
+        return null;
+
+      const firstStrip = this.getPageOffsetRect(this.$refs.strip0);
+      const lastStrip = this.getPageOffsetRect(this.$refs['strip' + (this.endGrain.length - 1)]);
+
+      // On or above the first item
+      if (xPos <= firstStrip.right)
+        return 0;
+
+      // Below the last item
+      if (xPos >= lastStrip.right)
+        return this.endGrain.length;
+
+      // On the last item
+      if (xPos >= lastStrip.left)
+        return this.endGrain.length - 1;
+
+      // Check the previous target first, as it is most likely unchanged due to how
+      // often mouseMove events occur
+      if (this.dropTarget  !== null && this.dropTarget > 0 && this.dropTarget < this.endGrain.length - 1)
+      {
+        const currentTarget = this.getPageOffsetRect(this.$refs['strip' + this.dropTarget]);
+        if (xPos >= currentTarget.left && xPos < currentTarget.right)
+          return this.dropTarget;
+      }
+
+      // Just loop through all the strips, there shouldn't be enough to warrant anything more efficient
+      for (let i = 1; i < this.endGrain.length - 1; i++)
+      {
+        const testTarget = this.getPageOffsetRect(this.$refs['strip' + i]);
+        if (xPos >= testTarget.left && xPos < testTarget.right)
+          return i;
+      }
+
+      // This should never occur, so it probably will!
+      return null;
+    },
+
+
+    getPageOffsetRect(element)
+    {
+      const clientRect = element.getBoundingClientRect();
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+      return {
+        top: clientRect.top + scrollTop,
+        left: clientRect.left + scrollLeft,
+        right: clientRect.right + scrollLeft,
+        bottom: clientRect.bottom + scrollTop
+      };
     }
   }
 }
@@ -145,8 +298,16 @@ export default {
 }
 
 
+.draghint
+{
+  margin-bottom: 2em;
+}
+
+
 svg
 {
+  user-select: none;
+
   @media screen
   {
     box-shadow: 0 0 3em black;
@@ -155,6 +316,11 @@ svg
   @media print
   {
     max-width: 100%;
+  }
+
+  &.dragging
+  {
+    cursor: grabbing;
   }
 }
 </style>
