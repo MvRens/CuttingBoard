@@ -13,7 +13,9 @@ function DefaultSettings()
     borders: false,
     bladeKerf: 0.35,
     crosscutWidth: 3,
-    direction: DirectionEnum.alternate
+    direction: DirectionEnum.alternate,
+    highlightBoard: true,
+    highlightLayer: true
   };
 }
 
@@ -70,6 +72,14 @@ function DefaultEndGrain()
 
 export default createStore({
   state: {
+    // These are not stored persistently
+    volatile: {
+      highlightedBoard: null,
+      highlightedLayer: null
+    },
+
+    // When adding any persistent settings, remember to update the
+    // serializeState and deserializeState functions below
     settings: DefaultSettings(),
     wood: DefaultWood(),
     boards: DefaultBoards(),
@@ -137,6 +147,12 @@ export default createStore({
       });
 
       state.wood.splice(index, 1);
+    },
+
+
+    updateVolatile(state, payload)
+    {
+      mergeObject(payload, state.volatile);
     },
 
 
@@ -417,7 +433,9 @@ const SettingsNameMapJSON = {
     borders: 'borders',
     bladeKerf: 'bladeKerf',
     crosscutWidth: 'crosscutWidth',
-    direction: 'direction'
+    direction: 'direction',
+    highlightBoard: 'highlightBoard',
+    highlightLayer: 'highlightLayer'
   },
 
   wood: {
@@ -452,7 +470,9 @@ const SettingsNameMapMsgPack = {
     borders: 'b',
     bladeKerf: 'k',
     crosscutWidth: 'c',
-    direction: 'd'
+    direction: 'd',
+    highlightBoard: 'h',
+    highlightLayer: 'l'
   },
 
   wood: {
@@ -507,6 +527,8 @@ function serializeSettings(settings, map)
   result[map.settings.bladeKerf] = settings.bladeKerf;
   result[map.settings.crosscutWidth] = settings.crosscutWidth;
   result[map.settings.direction] = settings.direction;
+  result[map.settings.highlightBoard] = settings.highlightBoard;
+  result[map.settings.highlightLayer] = settings.highlightLayer;
 
   return result;
 }
@@ -593,6 +615,16 @@ function deserializeState(parsedPayload)
       result.boards[0].thickness = parseFloatDef(parsedPayload.settings.boardThickness);
   }
 
+  if (parsedPayload.hasOwnProperty(map.settings.self))
+  {
+    if (!parsedPayload[map.settings.self].hasOwnProperty(map.settings.highlightBoard))
+      result.settings.highlightBoard = true;
+
+    if (!parsedPayload[map.settings.self].hasOwnProperty(map.settings.highlightLayer))
+      result.settings.highlightLayer = true;
+  }
+
+
   if (result.endGrain.length === 0)
     updateEndGrain(result.endGrain, result.settings, result.boards);
 
@@ -613,6 +645,8 @@ function deserializeSettings(parsedPayload, map)
     bladeKerf: parseFloatDef(settings[map.settings.bladeKerf]),
     crosscutWidth: parseFloatDef(settings[map.settings.crosscutWidth]),
     direction: DirectionEnum.isValid(settings[map.settings.direction]) ? settings[map.settings.direction] : DirectionEnum.uniform,
+    highlightBoard: settings[map.settings.highlightBoard] === true,
+    highlightLayer: settings[map.settings.highlightLayer] === true
   };
 }
 

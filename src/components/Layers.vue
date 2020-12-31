@@ -1,5 +1,5 @@
 <template>
-  <div class="board">
+  <div class="board" @mouseenter="highlightBoard" @mouseleave="removeHighlightBoard">
     <button @click="previousBoard" :disabled="boardIndex == 0">&lt;</button>
     <div class="name">Board {{ boardIndex + 1 }} of {{ boards.length }}</div>
     <button @click="removeBoard" v-if="boards.length > 1">Remove</button>
@@ -27,13 +27,13 @@
       <span class="header">&nbsp;</span>
 
       <template v-for="(layer, index) in currentBoard.layers">
-        <div class="index" :class="{ dropTargetAbove: dropTarget === index, dropTargetBelow: dropTarget === currentBoard.layers.length && index === currentBoard.layers.length - 1 }" :ref="'layer' + index" @mousedown.prevent="startDrag(index)">{{ index + 1 }}</div>
-        <select v-model="layer.wood" class="wood">
+        <div class="index" :class="{ dropTargetAbove: dropTarget === index, dropTargetBelow: dropTarget === currentBoard.layers.length && index === currentBoard.layers.length - 1 }" :ref="'layer' + index" @mousedown.prevent="startDrag(index)" @mouseenter="highlightLayer(index)" @mouseleave="removeHighlightLayer(index)">{{ index + 1 }}</div>
+        <select v-model="layer.wood" class="wood" @mouseenter="highlightLayer(index)" @mouseleave="removeHighlightLayer(index)">
           <option v-for="(item, index) in wood" :value="index">{{ item.name }}</option>
         </select>
-        <input type="number" class="width" :value="layer.width" @input="layer.width = parseFloatDef($event.target.value)" />
+        <input type="number" class="width" :value="layer.width" @input="layer.width = parseFloatDef($event.target.value)" @mouseenter="highlightLayer(index)" @mouseleave="removeHighlightLayer(index)"/>
 
-        <div class="remove">
+        <div class="remove" @mouseenter="highlightLayer(index)" @mouseleave="removeHighlightLayer(index)">
           <button @click="removeLayer(index)">X</button>
         </div>
       </template>
@@ -49,8 +49,20 @@
 
     <div>
       <h2>Preview settings</h2>
-      <input id="borders" type="checkbox" :checked="settings.borders" @change="$store.commit('updateSettings', { borders: $event.target.checked })" />
-      <label for="borders"> Show borders</label>
+      <div>
+        <input id="borders" type="checkbox" :checked="settings.borders" @change="$store.commit('updateSettings', { borders: $event.target.checked })" />
+        <label for="borders"> Show borders</label>
+      </div>
+
+      <div>
+        <input id="highlightBoard" type="checkbox" :checked="settings.highlightBoard" @change="$store.commit('updateSettings', { highlightBoard: $event.target.checked })" />
+        <label for="highlightBoard"> Highlight current board in end grain preview</label>
+      </div>
+
+      <div>
+        <input id="highlightLayer" type="checkbox" :checked="settings.highlightLayer" @change="$store.commit('updateSettings', { highlightLayer: $event.target.checked })" />
+        <label for="highlightLayer"> Highlight current layer in end grain preview</label>
+      </div>
     </div>
 
     <div>
@@ -85,12 +97,14 @@ export default {
     return {
       boardIndex: 0,
       dragIndex: null,
-      dropTarget: null
+      dropTarget: null,
+      updateHighlightedBoard: false
     }
   },
 
 
   computed: {
+    volatile() { return this.$store.state.volatile; },
     settings() { return this.$store.state.settings; },
     wood() { return this.$store.state.wood; },
     boards() { return this.$store.state.boards; },
@@ -301,6 +315,43 @@ export default {
         return;
 
       this.$store.commit('updateSettings', { direction: direction });
+    },
+
+
+    highlightBoard()
+    {
+      this.updateHighlightedBoard = true;
+      this.$store.commit('updateVolatile', { highlightedBoard: this.boardIndex });
+    },
+
+
+    removeHighlightBoard()
+    {
+      this.updateHighlightedBoard = false;
+      this.$store.commit('updateVolatile', { highlightedBoard: null });
+    },
+
+
+    highlightLayer(index)
+    {
+      this.$store.commit('updateVolatile', { highlightedBoard: this.boardIndex, highlightedLayer: index });
+    },
+
+
+    removeHighlightLayer(index)
+    {
+      if (this.volatile.highlightedLayer === index)
+      {
+        this.$store.commit('updateVolatile', { highlightedBoard: null, highlightedLayer: null });
+      }
+    }
+  },
+
+  watch: {
+    boardIndex(newValue)
+    {
+      if (this.updateHighlightedBoard)
+        this.$store.commit('updateVolatile', { highlightedBoard: newValue });
     }
   }
 }

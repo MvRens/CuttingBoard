@@ -8,16 +8,18 @@
       :width="viewportWidth"
       :height="viewportHeight"
       :viewBox="viewBox"
-      :class="{ dragging: dropTarget !== null }">
+      :class="{ dragging: dropTarget !== null, highlightBoard: settings.highlightBoard && volatile.highlightedBoard !== null, highlightLayer: settings.highlightLayer && volatile.highlightedBoard !== null && volatile.highlightedLayer !== null }">
       <defs>
-        <g v-for="(board, boardIndex) in boards" :id="'strip' + boardIndex">
+        <g v-for="(board, boardIndex) in boards" :id="'strip' + boardIndex" class="boardLayer" :class="{ highlightedBoard: boardIndex === volatile.highlightedBoard }">
           <rect
             v-for="(layer, index) in board.layers"
             :width="toPixels(board.thickness)"
             :height="toPixels(layer.width)"
             x="0"
             :y="getBoardLayerOffset(board, index)"
-            :style="getBoardLayerStyle(board, index)" />
+            :style="getBoardLayerStyle(board, index)"
+            class="layer"
+            :class="{ highlightedLayer: boardIndex === volatile.highlightedBoard && index == volatile.highlightedLayer }" />
         </g>
         <g id="dropTarget">
           <line x1="0" y1="0" x2="0" :y2="boardPixelHeight" style="stroke: white; stroke-width: 2" />
@@ -60,6 +62,7 @@ export default {
 
 
   computed: {
+    volatile() { return this.$store.state.volatile; },
     settings() { return this.$store.state.settings; },
     boards() { return this.$store.state.boards; },
     wood() { return this.$store.state.wood; },
@@ -321,6 +324,23 @@ svg
   &.dragging
   {
     cursor: grabbing;
+  }
+
+
+  &.highlightBoard
+  {
+    .boardLayer:not(.highlightedBoard)
+    {
+      opacity: 0.5;
+    }
+  }
+
+  &.highlightLayer
+  {
+    .layer:not(.highlightedLayer)
+    {
+      opacity: 0.5;
+    }
   }
 }
 </style>

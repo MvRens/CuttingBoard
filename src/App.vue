@@ -227,6 +227,18 @@ html, body
   }
 }
 
+::-webkit-scrollbar
+{
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #606060;
+}
+
 #app
 {
   font-family: 'Verdana', 'Arial', sans-serif;
@@ -300,6 +312,8 @@ button
   width: 35em;
   flex-shrink: 0;
   box-shadow: 0 0 3em #101010;
+  display: flex;
+  flex-direction: column;
 
   .toolbar
   {
@@ -333,6 +347,11 @@ button
         margin-right: auto;
       }
     }
+  }
+
+  .tabs
+  {
+    overflow: auto;
   }
 
   .tab
